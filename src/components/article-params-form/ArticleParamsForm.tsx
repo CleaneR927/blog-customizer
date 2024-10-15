@@ -5,7 +5,7 @@ import styles from './ArticleParamsForm.module.scss';
 import clsx from 'clsx';
 import { Text } from 'src/ui/text';
 import { Select } from 'src/ui/select';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
 	OptionType,
 	backgroundColors,
@@ -17,6 +17,7 @@ import {
 	ArticleStateType,
 } from 'src/constants/articleProps';
 import { RadioGroup } from 'src/ui/radio-group';
+import { useOutsideClickClose } from 'src/ui/select/hooks/useOutsideClickClose';
 
 interface ArticleParamsFormProps {
 	articleState: ArticleStateType;
@@ -29,10 +30,10 @@ export const ArticleParamsForm: React.FC<ArticleParamsFormProps> = ({
 	onApply,
 	onReset,
 }) => {
-	const [selectedOption, setSelectedOption] = useState<OptionType>(
+	const [selectedFontFamilyOption, setSelectedOption] = useState<OptionType>(
 		defaultArticleState.fontFamilyOption
 	);
-	const [selectedRadioOption, setSelectedRadioOption] = useState<OptionType>(
+	const [selectedFontSizeOption, setSelectedRadioOption] = useState<OptionType>(
 		defaultArticleState.fontSizeOption
 	);
 	const [selectedFontColorOption, setSelectedFontColorOption] =
@@ -42,22 +43,23 @@ export const ArticleParamsForm: React.FC<ArticleParamsFormProps> = ({
 	const [selectedSizeOption, setSelectedSizeOption] = useState<OptionType>(
 		defaultArticleState.contentWidth
 	);
-	const [isOpen, setIsOpen] = useState<boolean>(false);
+	const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+	const rootRef = useRef(null);
 
 	const toogleForm = () => {
-		setIsOpen((isOpen) => !isOpen);
+		setIsMenuOpen((isMenuOpen) => !isMenuOpen);
 	};
 
 	const handleApply = () => {
 		const newState: ArticleStateType = {
-			fontFamilyOption: selectedOption,
-			fontSizeOption: selectedRadioOption,
+			fontFamilyOption: selectedFontFamilyOption,
+			fontSizeOption: selectedFontSizeOption,
 			fontColor: selectedFontColorOption,
 			backgroundColor: selectedBackgroundColorOption,
 			contentWidth: selectedSizeOption,
 		};
 		onApply(newState);
-		setIsOpen(false);
+		setIsMenuOpen(false);
 	};
 
 	const handleReset = () => {
@@ -72,20 +74,36 @@ export const ArticleParamsForm: React.FC<ArticleParamsFormProps> = ({
 		setSelectedSizeOption(articleState.contentWidth);
 	}, [articleState]);
 
+	useOutsideClickClose({
+		isOpen: isMenuOpen,
+		rootRef,
+		onClose: () => setIsMenuOpen(false),
+		onChange: setIsMenuOpen,
+	});
+
 	return (
-		<>
-			<ArrowButton isOpen={isOpen} onClick={toogleForm} />
+		<div ref={rootRef}>
+			<ArrowButton isOpen={isMenuOpen} onClick={toogleForm} />
 			<aside
-				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
-				<form className={styles.form} onSubmit={(e) => e.preventDefault()}>
+				className={clsx(styles.container, {
+					[styles.container_open]: isMenuOpen,
+				})}>
+				<form
+					className={styles.form}
+					onSubmit={(e) => {
+						e.preventDefault();
+						handleApply();
+					}}>
 					<Text size={31} weight={800} uppercase>
 						Задайте параметры
 					</Text>
 					<div className={styles.topMargin}>
 						<Select
-							selected={selectedOption}
+							selected={selectedFontFamilyOption}
 							options={fontFamilyOptions}
-							placeholder={`${selectedOption?.title ?? 'Выберите шрифт'}`}
+							placeholder={`${
+								selectedFontFamilyOption?.title ?? 'Выберите шрифт'
+							}`}
 							onChange={setSelectedOption}
 							title='Шрифт'
 						/>
@@ -94,7 +112,7 @@ export const ArticleParamsForm: React.FC<ArticleParamsFormProps> = ({
 						<RadioGroup
 							name='fontStyles'
 							options={fontSizeOptions}
-							selected={selectedRadioOption}
+							selected={selectedFontSizeOption}
 							onChange={setSelectedRadioOption}
 							title='Стиль шрифта'
 						/>
@@ -131,11 +149,16 @@ export const ArticleParamsForm: React.FC<ArticleParamsFormProps> = ({
 						/>
 					</div>
 					<div className={styles.bottomContainer}>
-						<Button title='Сбросить' onClick={handleReset} type='clear' />
-						<Button title='Применить' onClick={handleApply} type='apply' />
+						<Button
+							title='Сбросить'
+							htmlType='reset'
+							onClick={handleReset}
+							type='clear'
+						/>
+						<Button title='Применить' htmlType='submit' type='apply' />
 					</div>
 				</form>
 			</aside>
-		</>
+		</div>
 	);
 };
